@@ -1,20 +1,29 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "main": "app.ts",
+  "main": "dist/app.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon",
-    "start": "node --loader ts-node/esm src/app.ts",
+    "dev": "nodemon src/app.ts",
+    "start": "node dist/app.js",
     "build": "tsc",
+    "build:prod": "rm -rf dist && tsc",
+    "docker:build": "docker build -t quizmaster-backend .",
+    "docker:run": "docker run -p 4000:4000 --env-file .env quizmaster-backend",
     "test": "jest --config jest.config.mjs",
     "test:watch": "jest --config jest.config.mjs --watch",
     "test:coverage": "jest --config jest.config.mjs --coverage"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "groq-sdk": "^0.30.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0"
+  },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.9",
@@ -32,15 +41,5 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
-  },
-  "dependencies": {
-    "bcrypt": "^6.0.0",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.1",
-    "express": "^5.1.0",
-    "groq-sdk": "^0.30.0",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.18.0"
   }
 }
