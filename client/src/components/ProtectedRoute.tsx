@@ -1,0 +1,58 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/store';
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { isAuthenticated, user, token } = useAuthStore();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      // Check if there's a token in localStorage
+      const storedToken = localStorage.getItem('token');
+      
+      if (storedToken && (isAuthenticated || user)) {
+        // User has token and is authenticated, allow access
+        setIsLoading(false);
+      } else if (storedToken && !isAuthenticated && !user) {
+        // Has token but not authenticated - this might happen on page refresh
+        // For now, allow access and let the component handle it
+        setIsLoading(false);
+      } else if (!storedToken && !isAuthenticated) {
+        // No token and not authenticated, redirect to signin
+        router.push('/signin');
+        setIsLoading(false);
+      } else {
+        // Other cases, allow access
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [isAuthenticated, user, token, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Allow access if there's a token or user is authenticated
+  if (!isAuthenticated && !user && !localStorage.getItem('token')) {
+    return null; // Will redirect to signin
+  }
+
+  return <>{children}</>;
+}
