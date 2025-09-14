@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "QuizMaster - AI-Powered Learning Platform",
-  description: "Generate personalized quizzes on any topic, test your knowledge, and track your progress with our AI-powered learning platform.",
+  title: "CodeMaster - AI-Powered Learning Platform",
+  description: "Interactive coding challenges, AI-powered quizzes, and real-time code execution. Build your programming skills with personalized learning paths.",
 };
 
 export default function RootLayout({
