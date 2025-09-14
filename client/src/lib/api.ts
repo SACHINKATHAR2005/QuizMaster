@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://quizmaster-backend-production.up.railway.app/';
-
+const API_BASE_URL = 'quizmaster-backend-production.up.railway.app';
+// 4000
 
 // Create axios instance with default config
 const api = axios.create({
