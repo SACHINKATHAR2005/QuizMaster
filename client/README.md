@@ -150,8 +150,10 @@ The application uses Tailwind CSS for styling with:
 Create a `.env.local` file in the client directory:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=https://your-backend-url.com
 ```
+
+For Vercel deployment, set this environment variable in your Vercel dashboard.
 
 ## Deployment
 
