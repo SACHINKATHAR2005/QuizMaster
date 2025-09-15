@@ -3,48 +3,69 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { useAuthStore, useQuizStore } from '@/lib/store';
+import { useAuthStore, useQuizStore, useAppStore, useChallengeStore } from '@/lib/store';
 import { quizAPI, challengeAPI } from '@/lib/api';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import NotificationSystem from '@/components/NotificationSystem';
 
 export default function DashboardPage() {
-  const [quizForm, setQuizForm] = useState({
-    topic: '',
-  });
-  const [quizHistory, setQuizHistory] = useState<any[]>([]);
-  const [challengeHistory, setChallengeHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [darkMode, setDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [quizTopic, setQuizTopic] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const [includeCodeQuestions, setIncludeCodeQuestions] = useState(false);
+  
   const router = useRouter();
+  
+  // Global state stores
   const { user, logout } = useAuthStore();
-  const { currentQuiz, setCurrentQuiz } = useQuizStore();
+  const { 
+    currentQuiz, 
+    setCurrentQuiz, 
+    quizHistory, 
+    setQuizHistory, 
+    loading: quizLoading, 
+    error: quizError, 
+    setLoading: setQuizLoading, 
+    setError: setQuizError,
+    addQuizToHistory 
+  } = useQuizStore();
+  const { 
+    darkMode, 
+    toggleDarkMode, 
+    addNotification 
+  } = useAppStore();
+  const { 
+    challengeHistory, 
+    setChallengeHistory, 
+    loading: challengeLoading, 
+    setLoading: setChallengeLoading 
+  } = useChallengeStore();
 
 
   const loadQuizHistory = async () => {
+    setQuizLoading(true);
     try {
       const response = await quizAPI.getAll();
       if (response.data.success) {
         setQuizHistory(response.data.data);
-      } else {
+        addNotification('Quiz history loaded successfully', 'success');
       }
     } catch (err) {
+      addNotification('Failed to load quiz history', 'error');
+    } finally {
+      setQuizLoading(false);
     }
   };
 
   const handleGenerateQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quizTopic.trim() || !difficulty) {
-      setError('Please enter a topic and select difficulty');
+      setQuizError('Please enter a topic and select difficulty');
       return;
     }
 
-    setLoading(true);
-    setError('');
+    setQuizLoading(true);
+    setQuizError(null);
 
     try {
       const response = await quizAPI.generate({
@@ -53,24 +74,18 @@ export default function DashboardPage() {
         includeCodeQuestions: includeCodeQuestions
       });
       if (response.data.success) {
-        console.log('Quiz generated successfully:', response.data.data);
-        // Store the generated quiz in the store
         setCurrentQuiz(response.data.data);
-        // Navigate to the quiz page
+        addQuizToHistory(response.data.data);
+        addNotification('Quiz generated successfully!', 'success');
         router.push('/quiz');
       }
     } catch (err: any) {
-      console.error('Quiz generation error:', err);
-      setError(err.response?.data?.message || 'Failed to generate quiz');
+      const errorMessage = err.response?.data?.message || 'Failed to generate quiz';
+      setQuizError(errorMessage);
+      addNotification(errorMessage, 'error');
     } finally {
-      setLoading(false);
+      setQuizLoading(false);
     }
-  };
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode.toString());
   };
 
   const handleLogout = () => {
@@ -94,12 +109,17 @@ export default function DashboardPage() {
 
 
   const loadChallengeHistory = async () => {
+    setChallengeLoading(true);
     try {
       const response = await challengeAPI.getChallenges();
       if (response.data.success) {
         setChallengeHistory(response.data.data || []);
+        addNotification('Challenge history loaded successfully', 'success');
       }
     } catch (err) {
+      addNotification('Failed to load challenge history', 'error');
+    } finally {
+      setChallengeLoading(false);
     }
   };
 
@@ -107,12 +127,6 @@ export default function DashboardPage() {
     if (user) {
       loadQuizHistory();
       loadChallengeHistory();
-    }
-    const savedDarkMode = localStorage.getItem('darkMode');
-    const defaultDarkMode = savedDarkMode !== null ? savedDarkMode === 'true' : true;
-    setDarkMode(defaultDarkMode);
-    if (savedDarkMode === null) {
-      localStorage.setItem('darkMode', 'true');
     }
   }, [user]);
 
@@ -135,7 +149,7 @@ export default function DashboardPage() {
       title: challenge.title || `${challenge.technology} Challenge`,
       score: challenge.score || null,
       status: challenge.completed ? 'completed' : 'pending',
-      date: new Date(challenge.createdAt || challenge.generatedAt).toLocaleDateString(),
+      date: new Date(challenge.createdAt || challenge.generatedAt || challenge.createdAt).toLocaleDateString(),
       difficulty: challenge.difficulty,
       technology: challenge.technology
     }))
@@ -145,6 +159,7 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
+      <NotificationSystem />
       <div className={`min-h-screen transition-colors duration-300 ${
         darkMode 
           ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white' 
@@ -166,7 +181,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center space-x-4">
                 <button
-                  onClick={toggleDarkMode}
+                  onClick={() => toggleDarkMode()}
                   className={`p-2 rounded-lg transition-colors ${
                     darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
                   }`}
@@ -372,8 +387,11 @@ export default function DashboardPage() {
                             if (activity.status === 'completed') {
                               router.push(`/result/${activity.id}`);
                             } else {
-                              setCurrentQuiz(quizHistory.find(q => q._id === activity.id));
-                              router.push('/quiz');
+                              const foundQuiz = quizHistory.find(q => q._id === activity.id);
+                              if (foundQuiz) {
+                                setCurrentQuiz(foundQuiz);
+                                router.push('/quiz');
+                              }
                             }
                           } else if (activity.type === 'challenge') {
                             router.push(`/challenges/${activity.id}`);
@@ -447,9 +465,9 @@ export default function DashboardPage() {
             }`}>
               <h2 className="text-3xl font-bold mb-6">Generate New Quiz</h2>
               
-              {error && (
+              {quizError && (
                 <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded-md text-sm mb-6">
-                  {error}
+                  {quizError}
                 </div>
               )}
 
@@ -505,10 +523,10 @@ export default function DashboardPage() {
                 </div>
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={quizLoading}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl"
                 >
-                  {loading ? '⏳ Generating...' : '🎯 Generate Quiz'}
+                  {quizLoading ? '⏳ Generating...' : '🎯 Generate Quiz'}
                 </Button>
               </form>
             </div>
