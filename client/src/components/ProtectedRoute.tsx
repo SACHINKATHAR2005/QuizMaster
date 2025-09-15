@@ -18,19 +18,16 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       // Check if there's a token in localStorage
       const storedToken = localStorage.getItem('token');
       
-      if (storedToken && (isAuthenticated || user)) {
-        // User has token and is authenticated, allow access
-        setIsLoading(false);
-      } else if (storedToken && !isAuthenticated && !user) {
-        // Has token but not authenticated - this might happen on page refresh
-        // For now, allow access and let the component handle it
-        setIsLoading(false);
-      } else if (!storedToken && !isAuthenticated) {
-        // No token and not authenticated, redirect to signin
-        router.push('/signin');
+      if (storedToken) {
+        // If we have a token but no user data, initialize auth
+        if (!isAuthenticated && !user) {
+          const { initializeAuth } = useAuthStore.getState();
+          initializeAuth();
+        }
         setIsLoading(false);
       } else {
-        // Other cases, allow access
+        // No token, redirect to signin
+        router.push('/signin');
         setIsLoading(false);
       }
     };

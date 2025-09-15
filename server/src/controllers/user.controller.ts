@@ -100,8 +100,9 @@ export const loginUser = async(req:Request<{},{},userInfo>,res:Response) :Promis
 
  res.cookie("token", token, {
     httpOnly: true,                    
-    secure: process.env.NODE_ENV! === "production", 
-    sameSite: "lax",               
+    secure: process.env.NODE_ENV === "production", 
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    domain: process.env.NODE_ENV === "production" ? undefined : undefined,
     maxAge: 1000 * 60 * 60             
   });
 

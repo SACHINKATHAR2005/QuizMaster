@@ -116,7 +116,23 @@ export const useAuthStore = create<AuthState>()(
       initializeAuth: () => {
         const token = localStorage.getItem('token');
         if (token) {
-          set({ token, isAuthenticated: true });
+          // Validate token by checking if it's expired
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const currentTime = Date.now() / 1000;
+            
+            if (payload.exp > currentTime) {
+              set({ token, isAuthenticated: true });
+            } else {
+              // Token expired, clear it
+              localStorage.removeItem('token');
+              set({ user: null, token: null, isAuthenticated: false });
+            }
+          } catch (error) {
+            // Invalid token, clear it
+            localStorage.removeItem('token');
+            set({ user: null, token: null, isAuthenticated: false });
+          }
         }
       },
     }),
